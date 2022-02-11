@@ -34,3 +34,6 @@ path = "../../highlight"
 [dependencies.tree-sitter-tags]
 version = "0.20"
 path = "../../tags"
+
+[dependencies.piktor]
+git = "ssh://git@github.com/hkmatsumoto/piktor.git"

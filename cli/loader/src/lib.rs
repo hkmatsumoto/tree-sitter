@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context, Error, Result};
 use libloading::{Library, Symbol};
 use once_cell::unsync::OnceCell;
+use piktor::PiktorConfiguration;
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
@@ -89,6 +90,7 @@ pub struct LanguageConfiguration<'a> {
     language_id: usize,
     highlight_config: OnceCell<Option<HighlightConfiguration>>,
     tags_config: OnceCell<Option<TagsConfiguration>>,
+    piktor_config: OnceCell<Option<PiktorConfiguration>>,
     highlight_names: &'a Mutex<Vec<String>>,
     use_all_highlight_names: bool,
 }
@@ -570,6 +572,7 @@ impl Loader {
                         highlights_filenames: config_json.highlights.into_vec(),
                         highlight_config: OnceCell::new(),
                         tags_config: OnceCell::new(),
+                        piktor_config: OnceCell::new(),
                         highlight_names: &*self.highlight_names,
                         use_all_highlight_names: self.use_all_highlight_names,
                     };
@@ -604,6 +607,7 @@ impl Loader {
                 tags_filenames: None,
                 highlight_config: OnceCell::new(),
                 tags_config: OnceCell::new(),
+                piktor_config: OnceCell::new(),
                 highlight_names: &*self.highlight_names,
                 use_all_highlight_names: self.use_all_highlight_names,
             };
@@ -762,6 +766,20 @@ impl<'a> LanguageConfiguration<'a> {
                 }
             })
             .map(Option::as_ref)
+    }
+
+    pub fn piktor_config(&self, language: Language) -> Result<Option<&PiktorConfiguration>> {
+        return self
+            .piktor_config
+            .get_or_try_init(|| {
+                let (locals_query, locals_ranges) =
+                    self.read_queries(&self.locals_filenames, "locals.scm")?;
+
+                PiktorConfiguration::new(language, &locals_query)
+                    .map(Some)
+                    .map_err(Error::from)
+            })
+            .map(Option::as_ref);
     }
 
     fn include_path_in_query_error<'b>(
